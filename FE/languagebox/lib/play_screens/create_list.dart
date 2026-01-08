@@ -75,7 +75,7 @@ class _CreateListHomeState extends State<CreateListHome> {
           children: [
             Container(
               alignment: Alignment.center,
-              height: MediaQuery.of(context).size.height/6,
+              height: MediaQuery.of(context).size.height/8,
               child: SingleChildScrollView(
                 controller: ScrollController(
                 ),
@@ -100,38 +100,38 @@ class _CreateListHomeState extends State<CreateListHome> {
                 ),
               ),
             ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                DropdownButton(
-                    value: drp1,
-                    items: listAlphabets.map<DropdownMenuItem<dynamic>>((dynamic value){
-                      return DropdownMenuItem(
-                        value: value,
-                        child: Text("$value"),
-                      );
-                    }).toList(),
-                    onChanged: (dynamic value){
-                      setState(() {
-                        drp1=value;
-                      });
-                    }),
-                DropdownButton(
-                    value: drp2,
-                    items: listNumbers.map<DropdownMenuItem<int>>((dynamic value){
-                      return DropdownMenuItem(
-                        value: value,
-                        child: Text("$value"),
-                      );
-                    }).toList(),
-                    onChanged: (int? value){
-                      setState(() {
-                        drp2=value!;
-                      });
-                    }),
-              ],
-            ),
+            // Row(
+            //   crossAxisAlignment: CrossAxisAlignment.center,
+            //   mainAxisAlignment: MainAxisAlignment.spaceAround,
+            //   children: [
+            //     DropdownButton(
+            //         value: drp1,
+            //         items: listAlphabets.map<DropdownMenuItem<dynamic>>((dynamic value){
+            //           return DropdownMenuItem(
+            //             value: value,
+            //             child: Text("$value"),
+            //           );
+            //         }).toList(),
+            //         onChanged: (dynamic value){
+            //           setState(() {
+            //             drp1=value;
+            //           });
+            //         }),
+            //     DropdownButton(
+            //         value: drp2,
+            //         items: listNumbers.map<DropdownMenuItem<int>>((dynamic value){
+            //           return DropdownMenuItem(
+            //             value: value,
+            //             child: Text("$value"),
+            //           );
+            //         }).toList(),
+            //         onChanged: (int? value){
+            //           setState(() {
+            //             drp2=value!;
+            //           });
+            //         }),
+            //   ],
+            // ),
 
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -157,6 +157,40 @@ class _CreateListHomeState extends State<CreateListHome> {
                 },
               ),
             ),
+            Expanded(
+              child: Container(
+                alignment: Alignment.topCenter,
+                child: FutureBuilder(future: requestHandler.getWordAll(), builder: (context,AsyncSnapshot<dynamic> snapshot){
+                  if(snapshot.connectionState==ConnectionState.waiting){
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  else if(snapshot.hasError){
+                    return Center(child: Text("${snapshot.error}"),);
+                  }
+                  else if (snapshot.hasData){
+                    List<dynamic> data2 = snapshot.data;
+                    var data = data2.where((value)=> value.toString().contains(search.text)).toList();
+                    return Flexible(
+                      child: ListView.builder(shrinkWrap: true,itemCount: data.length,itemBuilder: (context,index){
+                        return InkWell(
+                          child: Text("${data[index]}"),
+                          onTap: ()async{
+                            setState(() {
+                              if(!data1.contains(data[index])){
+                                data1.add(data[index]);
+                              }
+                            });
+                          },
+                        );
+                      }),
+                    );
+                  }
+                  else{
+                    return Text("No data");
+                  }
+                }),
+              ),
+            ),
             ElevatedButton(onPressed: ()async{
               if(listName.text.isNotEmpty){
                 File file = await requestHandler.fileCreate(listName.text, data1.toString().replaceAll("[", "").replaceAll("]", ""));
@@ -178,78 +212,11 @@ class _CreateListHomeState extends State<CreateListHome> {
                     SnackBar(content: Text("Please Enter the List Name above"))
                 );
               }
-              // await showDialog(context: context, builder: (context){
-              //   return Dialog(
-              //     child: Padding(
-              //       padding: const EdgeInsets.all(28.0),
-              //       child: Column(
-              //         mainAxisSize: MainAxisSize.min,
-              //         children: [
-              //           Padding(
-              //             padding: const EdgeInsets.all(18.0),
-              //             child: Text("Please Name the List",style: TextStyle(fontSize: 24,fontWeight: FontWeight.bold),),
-              //           ),
-              //           Padding(
-              //             padding: const EdgeInsets.all(18.0),
-              //             child: TextField(
-              //               controller: listName,
-              //               decoration: InputDecoration(
-              //                   border: OutlineInputBorder(),
-              //                   labelText: "Enter name of the list"
-              //               ),
-              //             ),
-              //           ),
-              //           // TextButton(onPressed: ()async{
-              //           //
-              //           // }, child: widget.type==null?Text("Create List",style: TextStyle(color: Colors.white),):Text("Update List",style:  TextStyle(color: Colors.white),),style: TextButton.styleFrom(
-              //           //     elevation: 12,
-              //           //     backgroundColor: Colors.black,
-              //           //     shape: ContinuousRectangleBorder(borderRadius: BorderRadius.circular(12))
-              //           // ),)
-              //         ],
-              //       ),
-              //     ),
-              //   );
-              // });
             }, child: widget.type==null?Text("Create List",style: TextStyle(color: Colors.white),):Text("Update List",style:  TextStyle(color: Colors.white)),style: ElevatedButton.styleFrom(
                 elevation: 12,
                 backgroundColor: Colors.black,
                 shape: ContinuousRectangleBorder(borderRadius: BorderRadius.circular(12))
             ),),
-            FutureBuilder(future: requestHandler.getWordAll(), builder: (context,AsyncSnapshot<dynamic> snapshot){
-              if(snapshot.connectionState==ConnectionState.waiting){
-                return Center(child: CircularProgressIndicator());
-              }
-              else if(snapshot.hasError){
-                return Center(child: Text("${snapshot.error}"),);
-              }
-              else if (snapshot.hasData){
-                List<dynamic> data2 = snapshot.data;
-                var data = data2.where((value)=> value.toString().contains(search.text)).toList();
-                return Flexible(
-                  child: ListView.builder(shrinkWrap: true,itemCount: data.length,itemBuilder: (context,index){
-                    return InkWell(
-                      child: Card(
-                        child: ListTile(
-                          title: Text("${data[index]}"),
-                          subtitle: Text("${data[index]}"),
-                        ),
-                      ),
-                      onTap: ()async{
-                        setState(() {
-                          if(!data1.contains(data[index])){
-                            data1.add(data[index]);
-                          }
-                        });
-                      },
-                    );
-                  }),
-                );
-              }
-              else{
-                return Text("No data");
-              }
-            }),
           ],
         )
     );
