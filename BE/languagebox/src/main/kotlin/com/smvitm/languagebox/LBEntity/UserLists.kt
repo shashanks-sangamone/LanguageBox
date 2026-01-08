@@ -35,5 +35,5 @@ data class UserLists (
     val listName:String,
 
     @Column(name = "filename")
-    val filename : String
+    var filename : String
 )

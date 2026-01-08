@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:languagebox/api/request_handler.dart';
 import 'package:languagebox/login_page/google_auth.dart';
 import 'package:languagebox/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,45 +28,24 @@ class LoginHomePage extends StatefulWidget {
 
 class _LoginHomePageState extends State<LoginHomePage> {
 
-  User? _user;
-
   @override
   void initState() {
     super.initState();
-    checkLogin();
+    checkForLogin();
   }
 
-  signIn()async{
-    final usercredensial = await GoogleAuth().signInWithGoogle();
-    SharedPreferences preferences = await SharedPreferences.getInstance();
-    setState(() {
-      _user=usercredensial?.user;
-    });
+  UserCredential? userCredential;
+  RequestHandler requestHandler = RequestHandler();
 
-    Map<dynamic,dynamic> map1 = {
-      "name":_user!.displayName,
-      "email":_user!.email,
-      "profile":_user!.photoURL,
-    };
-    String jsonString = jsonEncode(map1);
-    await preferences.setString("google", jsonString);
-    // print(await usercredensial!.user);
-    if(usercredensial!=null){
-      Navigator.push(context, MaterialPageRoute(builder: (context)=>MyHomePage()));
-    }
-    return usercredensial;
-  }
-
-  checkLogin()async{
-    GoogleSignIn auth = GoogleSignIn();
+  checkForLogin()async{
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-
-    setState(() {
-      print(sharedPreferences.getString("google"));
-    });
-    if(await auth.isSignedIn()){
-      Navigator.push(context, MaterialPageRoute(builder: (context)=>MyHomePage()));
-    }
+    if (sharedPreferences.containsKey("google") && sharedPreferences.containsKey("user")){
+      var google = jsonDecode(sharedPreferences.getString("google").toString());
+      var user = jsonDecode(sharedPreferences.getString("user").toString());
+      var data = await requestHandler.getUsersByEmail(google["email"].toString());
+      await sharedPreferences.setString("user", jsonEncode(data));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>MyApp()));
+      }
   }
 
   @override
@@ -77,20 +57,39 @@ class _LoginHomePageState extends State<LoginHomePage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text("Login Using google"),
-            InkWell(
-                child: CircleAvatar(backgroundImage: AssetImage("assets/google.png")),
+            userCredential==null?InkWell(
+                child: CircleAvatar(backgroundImage: AssetImage("assets/google.png"),radius: 50,),
               onTap: ()async{
-                var data = await signIn();
-
+                SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+                userCredential = await GoogleAuth().signIn();
+                await Future.delayed(Duration(seconds: 2));
+                setState((){
+                  print(userCredential);
+                });
+                var value = jsonDecode(sharedPreferences.getString("google").toString());
+                var data = await requestHandler.getUsersByEmail(value["email"].toString());
+                await sharedPreferences.setString("user", jsonEncode(data));
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>MyApp()));
               },
+            ):Container(),
+            userCredential==null?Container():Column(
+              children: [
+                CircleAvatar(
+                  backgroundImage: NetworkImage(userCredential!.user!.photoURL.toString(),scale: 1,),
+                  radius: 50,
+                ),
+                Text("${userCredential?.user?.email}\n${userCredential?.user?.displayName}")
+              ],
             ),
             InkWell(
-              child: CircleAvatar(backgroundImage: AssetImage("assets/google.png")),
+              child: Text("Log Out"),
               onTap: ()async{
+                setState(() {
+                  userCredential==null;
+                });
                 await GoogleAuth().signOut();
               },
             ),
-            Text("${_user?.photoURL},${_user?.email},${_user?.displayName}")
           ],
         ),
       ),

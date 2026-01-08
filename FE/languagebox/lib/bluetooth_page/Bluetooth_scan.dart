@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:languagebox/main.dart';
 
+import '../api/bluetooth_cont.dart';
+
 class BluetoothScan extends StatelessWidget {
   const BluetoothScan({super.key});
 
@@ -22,75 +24,56 @@ class BluetoothScanHome extends StatefulWidget {
 }
 
 class _BluetoothScanHomeState extends State<BluetoothScanHome> {
-  @override
-  void initState() {
-    super.initState();
-    start();
-    channel.setMethodCallHandler(handler);
-    // connect();
-  }
-
-  @override
-  void dispose() {
-    // TODO: implement dispose
-    super.dispose();
-    stop();
-  }
-
-  var channel = MethodChannel("com.example.languagebox/BLE");
-
-  start()async{
-    await channel.invokeMethod("start",{});
-  }
-
-  connect(String MAC)async{
-    await channel.invokeMethod("connectGATT",{"MAC":"68:25:DD:32:98:2A"});
-  }
 
 
+  BluetoothControll bluetoothControll = BluetoothControll();
 
-  stop()async{
-    await channel.invokeMethod("stop");
-  }
-
-  List<dynamic> list1 =[];
-
-  Future<void> handler(MethodCall call) async {
-    switch (call.method) {
-      case 'getDevices':
-        var data = call.arguments;
-        print(data);
-        setState(() {
-          if (!list1.contains(data)){
-            list1.add(data);
-          }
-        });
-        break;
-
-      case 'connectionState':
-        break;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("BluetoothDareess"),
+        title: Text("Bluetooth Devices"),
       ),
-      body: ListView.builder(itemCount: list1.length,itemBuilder: (context,index){
-        return InkWell(
-          child: Card(
-            child: ListTile(
-              title: Text("${list1[index]["name"]}"),
-              subtitle: Text("${list1[index]["address"]}"),
-            ),
-          ),
-          onTap: ()async{
-            await connect(list1[index]["address"]);
-            Navigator.push(context, MaterialPageRoute(builder: (context)=>MyHomePage()));
-          },
-        );
+      body: FutureBuilder(future: bluetoothControll.retrrnList(), builder: (context,AsyncSnapshot<dynamic> snapshot){
+        print(snapshot.data);
+        if(snapshot.connectionState==ConnectionState.waiting){
+          return CircularProgressIndicator();
+        }
+        else if(snapshot.hasError){
+          return Center(child: Text("${snapshot.error}"),);
+        }
+        else if (snapshot.hasData){
+          Set<dynamic> data = snapshot.data;
+          List<dynamic> data1 = data.toList();
+          return ListView.builder(shrinkWrap: true,itemCount: data1.length,itemBuilder: (context,index){
+            List<dynamic> bleDev = data1[index].toString().split(",");
+            return InkWell(
+              child: Card(
+                child: ListTile(
+                  title: Text("${bleDev[0]}"),
+                  subtitle: Text("${bleDev[1]}"),
+                ),
+              ),
+              onTap: ()async{
+                String address = data1[index].toString().split(",")[1];
+                await bluetoothControll.connectGATT(address);
+                await bluetoothControll.stopBle();
+                if(bluetoothControll.connectStatus){
+                  bluetoothControll.stopBle();
+                  Navigator.pop(context);
+                }
+              },
+            );
+          });
+        }
+        else{
+          return Text("No data");
+        }
+      }),
+      floatingActionButton: FloatingActionButton(onPressed: (){
+        setState(() {
+        });
       }),
     );
   }

@@ -10,6 +10,10 @@ import org.springframework.stereotype.Repository
 
 @Repository
 interface UserListsRepo : JpaRepository<UserLists,Int> {
+
+
+    @Query("select u from UserLists u where u.userId.id = :userId")
+    fun findByUserId(userId: Int): List<UserLists>
     //    update user_lists set list_name="" where id=1;
 
     @Query("update UserLists u set u.listName=:listName where u.id=:id")
